@@ -51,4 +51,38 @@ describe("Observable", () => {
     expect(loops).toBe(3);
     expect(results).toEqual([0, 1, 2]);
   });
+
+  test("a basic interval", done => {
+    /**
+     * This test is a bit non-deterministic because of the
+     * use of `setInterval` and `setTimeout`. It's mostly
+     * meant to show usage.
+     */
+    const source = new Observable((next, error, complete, signal) => {
+      let n = 0;
+      const id = setInterval(() => {
+        next(n++);
+      }, 100);
+
+      signal.addEventListener("abort", () => {
+        clearInterval(id);
+      });
+    });
+
+    const controller = new AbortController();
+    const results = [];
+
+    source.subscribe(
+      value => results.push(value),
+      null,
+      null,
+      controller.signal
+    );
+
+    setTimeout(() => {
+      controller.abort();
+      expect(results).toEqual([0, 1, 2, 3, 4]);
+      done();
+    }, 550);
+  });
 });
