@@ -90,6 +90,61 @@ export class Observable {
       );
     });
   }
+
+  [Symbol.asyncIterator]() {
+    let done = false;
+    let error = null;
+    let queue = [];
+    let dequeue = [];
+
+    this.subscribe(
+      val => {
+        queue.push(val);
+      },
+
+      err => {
+        error = err;
+      },
+
+      () => {
+        done = true;
+      },
+    );
+
+    async function next() {
+      if (dequeue.length > 0) {
+        const value = dequeue.pop();
+
+        return { value, done: false };
+      }
+
+      if (queue.length > 0) {
+        dequeue = queue.reverse();
+        queue = [];
+
+        return next();
+      }
+
+      if (error) {
+        throw error;
+      }
+
+      if (done) {
+        return { done };
+      }
+
+      await nextTick();
+      return next();
+    }
+
+    return {
+      next,
+    };
+  }
+}
+
+function nextTick() {
+  return new Promise(resolve => globalThis.setTimeout(resolve));
 }
 
 function createChildAbortController(signal) {
